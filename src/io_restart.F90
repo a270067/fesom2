@@ -185,20 +185,39 @@ subroutine restart(istep, l_read, which_readr, ice, dynamics, tracers, partit, m
   integer             :: cstep
   !_____________________________________________________________________________
   ! initialize directory for core dump restart 
+
+!DS  
+  if (partit%mype==0) write(*,*) 'In restart ----> 1',istep,nstart,ntotal,l_read, which_readr
   if(.not. initialized_raw) then
+    call MPI_Barrier(partit%MPI_COMM_FESOM, mpierr)
     initialized_raw = .true.
+!DS
+    if (partit%mype==0) write(*,*) 'In restart ----> 1.1'
+    if (partit%mype==0) write(*,*) ResultPath
     raw_restart_dirpath  = trim(ResultPath)//"/fesom_raw_restart/np"//int_to_txt(partit%npes)
     raw_restart_infopath = trim(ResultPath)//"/fesom_raw_restart/np"//int_to_txt(partit%npes)//".info"
     if(raw_restart_length_unit /= "off") then
+!DS
+      if (partit%mype==0) write(*,*) 'In restart ----> 1.2'
       if(partit%mype == RAW_RESTART_METADATA_RANK) then
+!DS
+        if (partit%mype==0) write(*,*) 'In restart ----> 1.3'
+        if (partit%mype==0) write(*,*) trim(ResultPath)//"/fesom_raw_restart" 
+        if (partit%mype==0) write(*,*) 'RAW_RESTART_METADATA_RANK=', RAW_RESTART_METADATA_RANK
+
         ! execute_command_line with mkdir sometimes fails, use a custom implementation around mkdir from C instead
         call mkdir(trim(ResultPath)//"/fesom_raw_restart") ! we have no mkdir -p, create the intermediate dirs separately
+!DS
+        if (partit%mype==0) write(*,*) 'In restart ----> 1.4'
+        if (partit%mype==0) write(*,*) raw_restart_dirpath
+
         call mkdir(raw_restart_dirpath)
       end if
       call MPI_Barrier(partit%MPI_COMM_FESOM, mpierr) ! make sure the dir has been created before we continue...
     end if
   end if
-
+!DS
+  if (partit%mype==0) write(*,*) 'In restart ----> 2'
   !_____________________________________________________________________________
   ! initialize directory for derived type binary restart
   if(.not. initialized_bin) then
@@ -214,11 +233,11 @@ subroutine restart(istep, l_read, which_readr, ice, dynamics, tracers, partit, m
         call MPI_Barrier(partit%MPI_COMM_FESOM, mpierr) ! make sure the dir has been created before we continue...
     end if
   end if
-  
+   if (partit%mype==0) write(*,*) 'In restart ----> 3' 
   !_____________________________________________________________________________
   ! compute current time based on what is written in fesom.clock file
   ctime=timeold+(dayold-1.)*86400
-  
+  if (partit%mype==0) write(*,*) 'In restart ----> 4 ctime=',ctime
   !_____________________________________________________________________________
   ! initialise files for netcdf restart if l_read==TRUE --> the restart file 
   ! will be read
@@ -229,7 +248,7 @@ subroutine restart(istep, l_read, which_readr, ice, dynamics, tracers, partit, m
                call ini_ocean_io(yearold, dynamics, tracers, partit, mesh)
   if (use_ice) call ini_ice_io  (yearold, ice, partit, mesh)
   end if
-
+  if (partit%mype==0) write(*,*) 'In restart ----> 5'
   !___READING OF RESTART________________________________________________________
   ! should restart files be readed --> see r_restart in gen_modules_clock.F90
   if (l_read) then
@@ -246,7 +265,7 @@ subroutine restart(istep, l_read, which_readr, ice, dynamics, tracers, partit, m
       inquire(file=bin_restart_infopath, exist=binfiles_exist)
     end if
     call MPI_Bcast(binfiles_exist, 1, MPI_LOGICAL, RAW_RESTART_METADATA_RANK, partit%MPI_COMM_FESOM, mpierr)
-    
+   if (partit%mype==0) write(*,*) 'In restart ----> 6'   
     !___________________________________________________________________________
     ! read core dump file restart
     if(rawfiles_exist) then
@@ -301,7 +320,7 @@ subroutine restart(istep, l_read, which_readr, ice, dynamics, tracers, partit, m
         end if
     end if
   end if
-
+  if (partit%mype==0) write(*,*) 'In restart ----> 7'
   if (istep==0) return
     
   !___WRITING OF RESTART________________________________________________________  
@@ -675,7 +694,7 @@ subroutine read_all_raw_restarts(mpicomm, mype)
     ! compare the restart time with our actual time
     if(int(ctime) /= int(rtime)) then
       print *, "raw restart time ",rtime,"does not match current clock time",ctime
-      stop 1
+!DS      stop 1
     end if
     globalstep = rstep
     print *,"reading raw restart from "//raw_restart_dirpath
@@ -817,8 +836,8 @@ subroutine read_restart(path, filegroup, mpicomm, mype)
      if (int(ctime)/=int(rtime)) then
         write(*,*) 'Reading restart: timestamps in restart and in clock files do not match for ', filegroup%files(i)%varname, ' at ', filegroup%files(i)%path
         write(*,*) 'restart/ times are:', ctime, rtime
-        write(*,*) 'the model will stop!'
-        stop 1
+!DS        write(*,*) 'the model will stop!'
+!DS        stop 1
       end if
     end if
   end do
