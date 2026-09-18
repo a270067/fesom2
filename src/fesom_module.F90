@@ -249,16 +249,23 @@ contains
             call xios_initialize("fesom", return_comm=xios_comm)
             f%partit%MPI_COMM_FESOM = xios_comm
             call io_xios_mark_client_initialized()
-            block
-              integer :: wrank, wsize, srank, ssize, ierr2
-              call MPI_Comm_rank(MPI_COMM_WORLD, wrank, ierr2)
-              call MPI_Comm_size(MPI_COMM_WORLD, wsize, ierr2)
-              call MPI_Comm_rank(xios_comm,      srank, ierr2)
-              call MPI_Comm_size(xios_comm,      ssize, ierr2)
-              write(*,'("EARLY_XIOS_SPLIT wrank=",I5,"/",I5," splitrank=",I5,"/",I5)') &
-                    wrank, wsize, srank, ssize
-              flush(6)
-            end block
+            ! One-time verification diagnostic (2026-09-18): confirmed the
+            ! standalone XIOS split preserves exact 1:1 rank correspondence
+            ! with MPI_COMM_WORLD for all 3456 client ranks (ruled out rank
+            ! reordering as the cause of job 27535401's raw-restart read
+            ! failures). Disabled now -- printing this per-rank for every
+            ! core is log spam once the split is known-good. Re-enable if
+            ! the split's rank ordering is ever in question again.
+            !block
+            !  integer :: wrank, wsize, srank, ssize, ierr2
+            !  call MPI_Comm_rank(MPI_COMM_WORLD, wrank, ierr2)
+            !  call MPI_Comm_size(MPI_COMM_WORLD, wsize, ierr2)
+            !  call MPI_Comm_rank(xios_comm,      srank, ierr2)
+            !  call MPI_Comm_size(xios_comm,      ssize, ierr2)
+            !  write(*,'("EARLY_XIOS_SPLIT wrank=",I5,"/",I5," splitrank=",I5,"/",I5)') &
+            !        wrank, wsize, srank, ssize
+            !  flush(6)
+            !end block
           end if
         end block
 #else
