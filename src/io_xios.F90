@@ -170,19 +170,18 @@ contains
     ne = partit%myDim_elem2D
 
     ! --- 1. initialise XIOS client on the FESOM OASIS local comm ------------
-    ! Per-rank diagnostic disabled (2026-09-18) -- log spam once printed for
-    ! every one of 3456+ cores. Re-enable if the parent_comm/rank mapping is
-    ! ever in question again.
-    !block
-    !  integer :: wrank, wsize, prank, psize, ierr
-    !  call MPI_Comm_rank(MPI_COMM_WORLD, wrank, ierr)
-    !  call MPI_Comm_size(MPI_COMM_WORLD, wsize, ierr)
-    !  call MPI_Comm_rank(parent_comm,     prank, ierr)
-    !  call MPI_Comm_size(parent_comm,     psize, ierr)
-    !  write(*,'("IO_XIOS_COMM mype=",I5," wrank=",I5,"/",I5," prank=",I5,"/",I5," calls=",I0)') &
-    !        partit%mype, wrank, wsize, prank, psize, init_call_count + 1
-    !  flush(6)
-    !end block
+    ! Per-rank print disabled (2026-09-18) -- log spam once printed for
+    ! every one of 3456+ cores. MPI_Comm_rank/size calls kept in place.
+    block
+      integer :: wrank, wsize, prank, psize, ierr
+      call MPI_Comm_rank(MPI_COMM_WORLD, wrank, ierr)
+      call MPI_Comm_size(MPI_COMM_WORLD, wsize, ierr)
+      call MPI_Comm_rank(parent_comm,     prank, ierr)
+      call MPI_Comm_size(parent_comm,     psize, ierr)
+      !write(*,'("IO_XIOS_COMM mype=",I5," wrank=",I5,"/",I5," prank=",I5,"/",I5," calls=",I0)') &
+      !      partit%mype, wrank, wsize, prank, psize, init_call_count + 1
+      flush(6)
+    end block
     init_call_count = init_call_count + 1
 
     if (.not. client_already_initialized) then
