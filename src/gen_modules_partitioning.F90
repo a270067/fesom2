@@ -12,12 +12,13 @@ end module mod_parsup
 
 module par_support_interfaces
   interface
-  subroutine par_init(partit)
+  subroutine par_init(partit, comm_preset)
      USE o_PARAM
      USE MOD_PARTIT
      USE MOD_PARSUP
      implicit none
      type(t_partit), intent(inout), target :: partit
+     logical, optional, intent(in) :: comm_preset
   end subroutine par_init
 
   subroutine init_mpi_types(partit, mesh)
@@ -46,7 +47,7 @@ module par_support_interfaces
   end interface
 end module par_support_interfaces
 
-subroutine par_init(partit)    ! initializes MPI
+subroutine par_init(partit, comm_preset)    ! initializes MPI
   USE o_PARAM
   USE MOD_PARTIT
   USE MOD_PARSUP
@@ -57,13 +58,21 @@ subroutine par_init(partit)    ! initializes MPI
 
   implicit none
   type(t_partit), intent(inout), target :: partit
+  logical, optional, intent(in)         :: comm_preset
   integer                               :: i
   integer                               :: provided_mpi_thread_support_level
   character(:), allocatable             :: provided_mpi_thread_support_level_name
 #if defined __oasis || defined  __ifsinterface || defined  __yac
   ! use comm from coupler or ifs
 #else
-  partit%MPI_COMM_FESOM=MPI_COMM_WORLD ! use global comm if not coupled (e.g. no __coupled or __ifsinterface)
+  ! comm_preset=.true.: a standalone (no OASIS/YAC) run already set
+  ! partit%MPI_COMM_FESOM itself, from an early xios_initialize(...,
+  ! return_comm=...) split for a dedicated XIOS server pool -- see
+  ! fesom_module.F90 / FESOM_XIOS_SERVER. Don't clobber it with the full
+  ! MPI_COMM_WORLD (which would include the XIOS server ranks).
+  if (.not. (present(comm_preset) .and. comm_preset)) then
+    partit%MPI_COMM_FESOM=MPI_COMM_WORLD ! use global comm if not coupled (e.g. no __coupled or __ifsinterface)
+  end if
 #endif
   call MPI_Comm_Size(partit%MPI_COMM_FESOM,partit%npes,i)
   call MPI_Comm_Rank(partit%MPI_COMM_FESOM,partit%mype,i) 

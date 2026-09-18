@@ -1,0 +1,76 @@
+#!/bin/bash
+#SBATCH --job-name=palk_7srv
+#SBATCH -p compute
+#SBATCH --ntasks=3468
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=00:30:00
+#SBATCH -o /scratch/a/a270067/palk_7/osrv_%j.out
+#SBATCH -e /scratch/a/a270067/palk_7/esrv_%j.out
+#SBATCH -A ch0636
+
+# TEST RUN (2026-09-18): palk_7 with a dedicated XIOS server pool instead of
+# attached mode. 3456 model ranks (unchanged decomposition) + 12 XIOS server
+# ranks appended at ranks 3456-3467 (--ntasks bumped from 3456 to 3468
+# accordingly). iodef.xml/context_fesom.xml's using_server flipped to true
+# to match.
+#
+# FESOM_XIOS_SERVER=1 below triggers the new early-split code path added to
+# fesom_module.F90/io_xios.F90/gen_modules_partitioning.F90: without OASIS/
+# YAC to pre-split MPI_COMM_WORLD, FESOM now calls xios_initialize(...,
+# return_comm=...) itself, before par_init/mesh_setup, so the mesh gets
+# partitioned on the 3456-rank client-only comm instead of all 3468 ranks
+# (which crashed job 27534758 looking for a nonexistent dist_3468 mesh).
+#
+# xios_server.exe is the prebuilt binary from the AWICM3-v3.4.2 XIOS
+# install that fesom2-2.8.0's libxios.a is itself linked against (see
+# XIOS_LIB in build/CMakeCache.txt), so it's MPI-ABI-compatible with
+# fesom.x (both openmpi-4.1.2) and can share one srun --multi-prog launch.
+# It is NOT RPATH-complete like fesom.x though -- `ldd` shows it can't find
+# libnetcdff/libnetcdf/libhdf5(_fortran/_hl)/libhdf5_hl_fortran on its own,
+# so xios_server_wrapper.sh below sets LD_LIBRARY_PATH explicitly to the
+# exact spack hashes fesom.x already uses (hdf5-1.12.1-tvymb5 provides all
+# four hdf5 libs including the fortran variants; netcdf-c-4.8.1-2k3cmu and
+# netcdf-fortran-4.5.3-k6xq5g provide the rest) before exec'ing it.
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+xiospath=/work/ch0636/a270067/model_codes/awicm3-v3.4.2/xios
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/scratch/a/a270067/palk_7
+cd "$output"
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+cat > xios_server_wrapper.sh <<EOF
+#!/bin/bash
+export LD_LIBRARY_PATH=/sw/spack-levante/hdf5-1.12.1-tvymb5/lib:/sw/spack-levante/netcdf-c-4.8.1-2k3cmu/lib:/sw/spack-levante/netcdf-fortran-4.5.3-k6xq5g/lib:\$LD_LIBRARY_PATH
+exec ${xiospath}/bin/xios_server.exe
+EOF
+chmod +x xios_server_wrapper.sh
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom.x
+3456-3467 ./xios_server_wrapper.sh
+* numactl --localalloc -- ${modpath}/bin/fesom.x
+EOF
+
+export FESOM_XIOS_SERVER=1
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit

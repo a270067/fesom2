@@ -1,0 +1,64 @@
+#!/bin/bash
+#SBATCH --job-name=palk_8srv
+#SBATCH -p compute
+#SBATCH --ntasks=3468
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=00:30:00
+#SBATCH -o /scratch/a/a270067/palk_8/osrv_%j.out
+#SBATCH -e /scratch/a/a270067/palk_8/esrv_%j.out
+#SBATCH -A ch0636
+
+# XIOS EFFICIENCY TEST (2026-09-18): palk_8 is palk_7's server-mode setup
+# (same restart, same mesh/decomposition, same 12-rank dedicated XIOS server
+# pool via FESOM_XIOS_SERVER=1 -- see palk7_server.job for the full
+# rationale/background) with temp/salt/unod/vnod moved from monthly to daily
+# output (file_def_fesom.xml) to put a heavier 3D write load on the server
+# pool and compare XIOS throughput/timing against palk_7's lighter monthly
+# load. use_global_tides=.false. here (copied from palk_7 post-blowup-debug
+# state) -- this run is about I/O, not tides.
+#
+# Independent scratch dir/restart copy from palk_7 (not shared) so the two
+# can be run/compared without interfering with each other.
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+xiospath=/work/ch0636/a270067/model_codes/awicm3-v3.4.2/xios
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/scratch/a/a270067/palk_8
+cd "$output"
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+cat > xios_server_wrapper.sh <<EOF
+#!/bin/bash
+export LD_LIBRARY_PATH=/sw/spack-levante/hdf5-1.12.1-tvymb5/lib:/sw/spack-levante/netcdf-c-4.8.1-2k3cmu/lib:/sw/spack-levante/netcdf-fortran-4.5.3-k6xq5g/lib:\$LD_LIBRARY_PATH
+exec ${xiospath}/bin/xios_server.exe
+EOF
+chmod +x xios_server_wrapper.sh
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom.x
+3456-3467 ./xios_server_wrapper.sh
+* numactl --localalloc -- ${modpath}/bin/fesom.x
+EOF
+
+export FESOM_XIOS_SERVER=1
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit

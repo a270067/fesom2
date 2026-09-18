@@ -83,6 +83,13 @@ module io_xios_module
   type(xios_context), save :: ctx_hdl
   logical,            save :: xios_on = .false.
 
+  ! Set by io_xios_mark_client_initialized() when a standalone (no OASIS/YAC)
+  ! run has already called xios_initialize(..., return_comm=...) early, before
+  ! par_init/mesh_setup, to get a properly split client-only communicator for
+  ! a dedicated XIOS server pool (see fesom_module.F90, FESOM_XIOS_SERVER env
+  ! var). io_xios_init then must not call xios_initialize a second time.
+  logical,            save :: client_already_initialized = .false.
+
   ! Indices (1-based, into the local myDim_elem2D list) of elements owned by
   ! this rank — i.e. those sent to XIOS. Populated in io_xios_init.
   integer,     allocatable, save, target :: owned_elem_local(:)
@@ -90,6 +97,7 @@ module io_xios_module
   integer,                  save :: init_call_count = 0
 
   public :: io_xios_owned_elem_local, io_xios_n_owned_elem
+  public :: io_xios_mark_client_initialized
 
 contains
 
@@ -106,6 +114,14 @@ contains
   logical function io_xios_is_on() result(r)
     r = xios_on
   end function
+
+  !> Called from fesom_module.F90 right after an early, pre-par_init
+  !> xios_initialize(..., return_comm=...) call, for the standalone
+  !> (no OASIS/YAC) dedicated-XIOS-server-pool path. Tells io_xios_init
+  !> below not to call xios_initialize a second time.
+  subroutine io_xios_mark_client_initialized()
+    client_already_initialized = .true.
+  end subroutine
 
   !> Wrapper around the XIOS Fortran binding xios_field_is_active. Returns
   !> true only when XIOS expects a sample for this field at the current
@@ -166,8 +182,13 @@ contains
     end block
     init_call_count = init_call_count + 1
 
-    call xios_initialize("fesom", local_comm=parent_comm)
-    client_comm = parent_comm    ! OASIS already split; keep API compat
+    if (.not. client_already_initialized) then
+      call xios_initialize("fesom", local_comm=parent_comm)
+    end if
+    client_comm = parent_comm    ! OASIS already split (or, for the standalone
+                                  ! server-pool path, parent_comm IS already
+                                  ! the return_comm from the early init) --
+                                  ! keep API compat either way
 
     ! --- 2. open the context on the FESOM communicator -----------------------
     call xios_context_initialize("fesom", parent_comm)

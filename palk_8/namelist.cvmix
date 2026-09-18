@@ -1,0 +1,141 @@
+! ============================================================================
+! ========== Namelist file for FESOM2 CVMix parameterizations ===============
+! ============================================================================
+! palk_7 on FESOM2.8.0. Structure = 2.8.0 stock template
+! (/home/a/a270067/fesom2-2.8.0/config/namelist.cvmix); values below carried
+! over from the old palk_7 config where a matching parameter name existed
+! there, otherwise left at the 2.8.0 stock default (noted per line).
+!
+! IMPORTANT (flagged again, as previously noted to the user): mix_scheme in
+! namelist.oce = 'KPP' only, and use_global_tides = .false. - nothing in
+! this experiment's namelist.oce activates IDEMIX or tidal-potential
+! forcing, so the IDEMIX/tidal file paths below are believed inert (same
+! situation as the old palk_7 config, unchanged). They point at
+! /work/ollie/... - an AWI-internal (Ollie) cluster path, NOT valid on
+! Levante. Carried over as-is per instruction (preserve existing behavior,
+! not fixed/guessed at), since old-palk precedent exists for these exact
+! parameter names. Note the 2.8.0 stock template's OWN defaults for these
+! same paths point at a *different* wrong cluster (/albedo/... - AWI's
+! newer Albedo cluster) - so neither old-palk nor stock-default paths are
+! valid on Levante; this is a pre-existing issue in both configs, not
+! something introduced by this merge.
+! ============================================================================
+
+&param_tke
+tke_c_k          = 0.1          ! old palk_7 value (same as stock default)
+tke_c_eps        = 0.7          ! old palk_7 value (same as stock default)
+tke_alpha        = 30.0         ! old palk_7 value (same as stock default)
+tke_mxl_min      = 1.0e-8       ! old palk_7 value (same as stock default)
+tke_mxl_choice   = 2            ! old palk_7 value (same as stock default)
+tke_kappaM_min   = 0.0          ! old palk_7 value (same as stock default)
+tke_kappaM_max   = 100.0        ! old palk_7 value (same as stock default)
+tke_cd           = 3.75         ! old palk_7 value (same as stock default)
+tke_surf_min     = 1.0e-4       ! old palk_7 value (same as stock default)
+tke_min          = 1.0e-6       ! old palk_7 value (same as stock default)
+tke_dolangmuir   = .false.      ! old palk_7 value (same as stock default)
+/
+
+&param_idemix
+idemix_tau_v     = 172800.0     ! old palk_7 value (same as stock default)
+idemix_tau_h     = 1296000.0    ! old palk_7 value (same as stock default)
+idemix_gamma     = 1.570        ! old palk_7 value (same as stock default)
+idemix_jstar     = 5.0          ! old palk_7 value (same as stock default)
+idemix_mu0       = 0.33333333   ! old palk_7 value (same as stock default)
+idemix_sforcusage = 0.2         ! old palk_7 value (same as stock default)
+idemix_n_hor_iwe_prop_iter = 5  ! old palk_7 value (same as stock default)
+idemix_surforc_file  = '/work/ollie/clidyn/forcing/IDEMIX/fourier_smooth_2005_cfsr_inert_rgrid.nc'  ! old palk_7 value (DIFFERS from stock default's /albedo/... path - see note above)
+idemix_surforc_vname = 'diss'      ! 2.8.0-only, no old-palk precedent -> stock default
+idemix_botforc_file  = '/work/ollie/clidyn/forcing/IDEMIX/tidal_energy_gx1v6_20090205_rgrid.nc'  ! old palk_7 value (DIFFERS from stock default's /albedo/... path - see note above)
+idemix_botforc_vname = 'stormt_M2_plus_nycand_CnoM2'  ! 2.8.0-only, no old-palk precedent -> stock default
+/
+
+! IDEMIX2 - entirely new in 2.8.0, no precedent at all in old palk_7 ->
+! stock defaults throughout (also AWI-internal /albedo/... paths, but
+! idemix2_enable_M2/niw flags leave the forcing-file-dependent parts off by
+! default anyway).
+&param_idemix2
+idemix2_tau_v         = 172800.0
+idemix2_tau_h         = 1296000.0
+idemix2_gamma         = 1.570
+idemix2_jstar         = 5.0
+idemix2_mu0           = 0.33333333
+idemix2_enable_AB     = .true.
+idemix2_AB_epsilon    = 0.1
+idemix2_nfbin         = 52
+idemix2_enable_hor_diff_expl = .false.
+idemix2_enable_hor_diff_impl_iter = .true.
+idemix2_hor_diff_niter       = 5
+idemix2_shelf_dist    = 300.e3
+idemix2_scal_cn = 1.0
+idemix2_Eiw_maxthresh= 0.1
+idemix2_enable_M2     = .false.
+idemix2_M2forc_file   = '/albedo/work/user/pscholz/forcing/IDEMIX2/idemix2_IT_forc_M2modes1-2_aniso.nc'
+idemix2_M2forc_vname  = 'Flux_to2'
+idemix2_M2forc_zname  = 'phi'
+idemix2_tau_M2_shelf  = 7.0
+idemix2_tau_M2_oce    = 50.0
+idemix2_enable_srf    = .true.
+idemix2_enable_niw    = .false.
+idemix2_fniw_usage    = 0.2
+idemix2_niwforc_file  = '/albedo/work/user/pscholz/forcing/IDEMIX/fpohlmann_idemix2_files/idemix_surface_forcing_0_global.nc'
+idemix2_niwforc_vname = 'diss'
+idemix2_tau_niw_shelf = 7.0
+idemix2_tau_niw_oce   = 3.0
+idemix2_enable_bot    = .true.
+idemix2_botforc_file  = '/albedo/work/user/pscholz/forcing/IDEMIX2/idemix2_IT_forc_M2modes1-10.nc'
+idemix2_botforc_vname = 'Conv_all10'
+idemix2_hrmsforc_file = '/albedo/work/user/pscholz/forcing/IDEMIX2/idemix2_hrms_Goff2023.nc'
+idemix2_hrmsforc_vname= 'HRMS'
+idemix2_hlamforc_file = '/albedo/work/user/pscholz/forcing/IDEMIX2/idemix2_lambda_Goff2010.nc'
+idemix2_hlamforc_vname= 'LAMBDA'
+idemix2_smooth_Eiw_diss= .false.
+idemix2_smooth_Eiw     = .false.
+idemix2_smooth_alpha_c = .false.
+idemix2_smooth_niter   = 1
+idemix2_diag_Ecompart = .false.
+idemix2_diag_Eiw      = .false.
+idemix2_diag_WWI      = .false.
+/
+
+&param_pp
+pp_use_fesompp = .true.         ! old palk_7 value (same as stock default)
+pp_Av0         = 0.01           ! old palk_7 value (same as stock default)
+pp_alpha       = 5.0            ! old palk_7 value (same as stock default)
+pp_exp         = 2.0            ! old palk_7 value (same as stock default)
+pp_Avbckg          = 1.0e-4     ! old palk_7 value (same as stock default)
+pp_Kvbckg          = 1.0e-5     ! old palk_7 value (same as stock default)
+pp_use_nonconstKvb = .true.     ! old palk_7 value (same as stock default)
+/
+
+&param_kpp
+kpp_use_fesomkpp  = .false.      ! old palk_7 value (same as stock default)
+kpp_use_enhanceKv = .true.      ! old palk_7 value (same as stock default)
+kpp_use_compEkman = .true.      ! old palk_7 value (same as stock default)
+kpp_use_monob     = .true.      ! old palk_7 value (same as stock default)
+kpp_interptype_ri = "linear"         ! old palk_7 value (same as stock default)
+kpp_interptype_atobl = "LMD94"       ! old palk_7 value (same as stock default)
+kpp_matchtechc = "ParabolicNonLocal" ! old palk_7 value (same as stock default)
+kpp_internalmix = "KPP"         ! old palk_7 value (same as stock default)
+kpp_pp_Av0      = 0.01          ! old palk_7 value (same as stock default)
+kpp_Av0         = 5.0e-3        ! old palk_7 value (same as stock default)
+kpp_Kv0         = 5.0e-3        ! old palk_7 value (same as stock default)
+kpp_Ri0         = 0.7           ! old palk_7 value (same as stock default)
+kpp_use_nonconstKvb = .true.    ! old palk_7 value (same as stock default)
+kpp_Avbckg      = 1.0e-4        ! old palk_7 value (same as stock default)
+kpp_Kvbckg      = 1.0e-5        ! old palk_7 value (same as stock default)
+kpp_reduce_tauuice = .false.    ! old palk_7 value (same as stock default)
+kpp_use_StokesMOST= .false.     ! 2.8.0-only, no old-palk precedent -> stock default
+kpp_A_stokes      = 0.005       ! 2.8.0-only, no old-palk precedent -> stock default
+kpp_langmuir_mixing= "NONE"     ! 2.8.0-only, no old-palk precedent -> stock default
+kpp_langmuir_entrainment= "NONE" ! 2.8.0-only, no old-palk precedent -> stock default
+/
+
+&param_tidal
+tidal_mixscheme    = "Simmons"   ! old palk_7 value (same as stock default)
+tidal_efficiency   = 0.2         ! old palk_7 value (same as stock default)
+tidal_vert_decayscale= 500.0     ! old palk_7 value (same as stock default)
+tidal_max_coeff    = 50e-4       ! old palk_7 value (same as stock default)
+tidal_lcl_mixfrac  = 0.33        ! old palk_7 value (same as stock default)
+tidal_depth_cutoff = 0.0         ! old palk_7 value (same as stock default)
+tidal_botforc_file = '/work/ollie/pscholz/FORCING/IDEMIX/tidal_energy_gx1v6_20090205_rgrid.nc'  ! old palk_7 value (DIFFERS from stock default's /pool/... path - see note above)
+/

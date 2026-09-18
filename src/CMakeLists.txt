@@ -321,6 +321,15 @@ if(FESOM_WITH_XIOS)
    target_include_directories(${PROJECT_NAME} PRIVATE ${XIOS_INCLUDE_DIR})
    target_link_libraries(${PROJECT_NAME} PRIVATE ${XIOS_LIB} stdc++)
    target_compile_definitions(${PROJECT_NAME} PRIVATE __XIOS)
+   # This prebuilt libxios.a was compiled with its OASIS coupling path always
+   # linked in (client.cpp calls oasis_init() etc. unconditionally, not behind
+   # an #ifdef), so it pulls in undefined mod_oasis_* symbols even when FESOM
+   # itself is standalone (FESOM_COUPLED=OFF, no __oasis). Link the real OASIS
+   # libs to satisfy them; this is not enabling coupling in FESOM's own code.
+   include(${CMAKE_CURRENT_LIST_DIR}/../cmake/FindOASIS.cmake)
+   target_link_libraries(${PROJECT_NAME} PRIVATE
+      ${OASIS_Fortran_LIBRARIES} ${MCT_Fortran_LIBRARIES}
+      ${MPEU_Fortran_LIBRARIES} ${SCRIP_Fortran_LIBRARIES})
 endif()
 
 if(${FESOM_COUPLED})
@@ -617,6 +626,13 @@ endif()
 add_executable(${PROJECT_NAME}.x ${src_home}/fesom_main.F90)
 target_compile_options(${PROJECT_NAME}.x PRIVATE ${FESOM_RUNTIME_CHECK_FLAGS} ${FESOM_BUILD_CHECK_FLAGS})
 target_link_libraries(${PROJECT_NAME}.x PUBLIC ${PROJECT_NAME})
+# Linking fesom (a private dependency below) pulls in its C++ objects
+# (async_threads_cpp, and with FESOM_WITH_XIOS also libxios.a), which can
+# make CMake pick mpicxx as the link driver for this executable instead of
+# mpif90/ifort - losing the Fortran runtime's main() wrapper around the
+# PROGRAM entry point in fesom_main.F90 ("undefined reference to main").
+# Pin it to Fortran, same as is already done for the fesom library target.
+set_target_properties(${PROJECT_NAME}.x PROPERTIES LINKER_LANGUAGE Fortran)
 
 # fesom_meshdiag executable (optional)
 if(BUILD_MESHDIAG)

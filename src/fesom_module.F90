@@ -156,6 +156,7 @@ contains
       integer, intent(out) :: fesom_total_nsteps
       ! EO parameters
       logical mpi_is_initialized
+      logical               :: xios_standalone_server_mode
       integer              :: tr_num, n
       real(kind=WP)        :: salt_max_loc, salt_max_glob   ! use_salt_anomaly restart detect
 
@@ -221,6 +222,49 @@ contains
         call cpl_yac_init(f%partit%MPI_COMM_FESOM)
 #endif
 
+#if defined(__XIOS) && !defined(__oasis) && !defined(__yac)
+        ! Standalone (no OASIS/YAC) dedicated XIOS server pool: split
+        ! MPI_COMM_WORLD into client/server communicators HERE, before
+        ! par_init/mesh_setup use partit%MPI_COMM_FESOM to size the mesh
+        ! partition -- doing this later (in io_xios_init, the AWICM3/OASIS
+        ! ordering) is too late, since a coupler normally does this split
+        ! and FESOM just inherits the already-split comm from it. With no
+        ! coupler here, XIOS does the split itself via return_comm= (see
+        ! idata.F90: xios(initialize) uses MPI_COMM_NULL as local_comm when
+        ! none is given, which makes cxios_init_client perform its own
+        ! MPI split instead of trusting a pre-split communicator). The
+        ! separate xios_server.exe ranks call xios(init_server)() as their
+        ! own main program and negotiate the same split from their side.
+        !
+        ! Opt-in via env var (not a namelist flag) because namelist.config
+        ! is read after par_init, too late to gate this early call.
+        block
+          use xios, only: xios_initialize
+          character(len=32) :: env_val
+          integer :: env_len, env_stat, xios_comm
+          xios_standalone_server_mode = .false.
+          call get_environment_variable("FESOM_XIOS_SERVER", env_val, env_len, env_stat)
+          if (env_stat == 0 .and. trim(env_val) == "1") then
+            xios_standalone_server_mode = .true.
+            call xios_initialize("fesom", return_comm=xios_comm)
+            f%partit%MPI_COMM_FESOM = xios_comm
+            call io_xios_mark_client_initialized()
+            block
+              integer :: wrank, wsize, srank, ssize, ierr2
+              call MPI_Comm_rank(MPI_COMM_WORLD, wrank, ierr2)
+              call MPI_Comm_size(MPI_COMM_WORLD, wsize, ierr2)
+              call MPI_Comm_rank(xios_comm,      srank, ierr2)
+              call MPI_Comm_size(xios_comm,      ssize, ierr2)
+              write(*,'("EARLY_XIOS_SPLIT wrank=",I5,"/",I5," splitrank=",I5,"/",I5)') &
+                    wrank, wsize, srank, ssize
+              flush(6)
+            end block
+          end if
+        end block
+#else
+        xios_standalone_server_mode = .false.
+#endif
+
         f%t1 = MPI_Wtime()
 
         ! Initialize enhanced profiler
@@ -232,7 +276,7 @@ contains
 #if defined (FESOM_PROFILING)
         call fesom_profiler_start("par_init")
 #endif
-        call par_init(f%partit)
+        call par_init(f%partit, xios_standalone_server_mode)
 #if defined (FESOM_PROFILING)
         call fesom_profiler_end("par_init")
 #endif

@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<file_definition type="one_file" format="netcdf4" par_access="collective"
+                 compression_level="0"
+                 time_counter_name="time" time_counter="exclusive">
+
+  <!-- palk_7: same field list and cadence as the old (pre-2.8.0) palk_7's
+       namelist.io &nml_list, re-expressed as XIOS file_def. par_access=
+       "independent" on u/v follows jack_6's precedent for these
+       element-domain fields.
+       2026-09-18: removed independent access from tx_sur/ty_sur (job
+       27522359's crash) then confirmed via a test run (job 27531854) that
+       this wasn't tx_sur-specific -- tx_sur/ty_sur wrote fine, but the very
+       next independent-access field, u, hit the identical "NetCDF: Attempt
+       to extend dataset during NC_INDEPENDENT I/O operation" error. So
+       independent access is broken here for ANY field once the monthly
+       record needs to extend -- removed from u/v too, all four now use the
+       file-level collective default. See file_def_fesom.xml.bak_indep_20260918
+       for the original (all-independent) version.
+       2026-09-18: unod30/vnod30 added back in -- these turned out not to
+       need any custom XIOS axis work at all. They're single-level (level 5)
+       node-domain slices of dynamics%uvnode, registered via a plain
+       def_stream() 2D call (new CASE clauses in io_meandata.F90, modeled on
+       the existing unod_sfc/vnod_sfc level-1 pattern already in
+       fesom2-2.8.0). write_mean's XIOS branch dispatches purely on
+       entry%glsize(1)==1 -> io_xios_send_2d_r8/r4, same path as sst/ssh, so
+       they're ordinary grid_2d_nod fields, nothing element-domain-shaped
+       about them. Requires a fesom.x rebuild (io_meandata.F90 changed). -->
+
+  <!-- ================= Daily ================= -->
+  <file_group id="fesom_1d" output_freq="1d" split_freq="1y" enabled="true">
+    <file id="f_sst"    name="sst.fesom"   ><field field_ref="sst"   /></file>
+    <file id="f_sss"    name="sss.fesom"   ><field field_ref="sss"   /></file>
+    <file id="f_ssh"    name="ssh.fesom"   ><field field_ref="ssh"   /></file>
+    <file id="f_uice"   name="uice.fesom"  ><field field_ref="uice"  /></file>
+    <file id="f_vice"   name="vice.fesom"  ><field field_ref="vice"  /></file>
+    <file id="f_a_ice"  name="a_ice.fesom" ><field field_ref="a_ice" /></file>
+    <file id="f_m_ice"  name="m_ice.fesom" ><field field_ref="m_ice" /></file>
+    <!-- palk_8 (2026-09-18): moved from monthly to daily, to load-test the
+         12-rank dedicated XIOS server pool with heavier 3D output. -->
+    <file id="f_temp"   name="temp.fesom"  ><field field_ref="temp"  /></file>
+    <file id="f_salt"   name="salt.fesom"  ><field field_ref="salt"  /></file>
+    <file id="f_unod"   name="unod.fesom"  ><field field_ref="unod"  /></file>
+    <file id="f_vnod"   name="vnod.fesom"  ><field field_ref="vnod"  /></file>
+  </file_group>
+
+  <!-- ================= Monthly ================= -->
+  <file_group id="fesom_1mo" output_freq="1mo" split_freq="1y" enabled="true">
+    <file id="f_m_snow" name="m_snow.fesom"><field field_ref="m_snow"/></file>
+    <file id="f_MLD1"   name="MLD1.fesom"  ><field field_ref="MLD1"  /></file>
+    <file id="f_MLD2"   name="MLD2.fesom"  ><field field_ref="MLD2"  /></file>
+    <file id="f_MLD3"   name="MLD3.fesom"  ><field field_ref="MLD3"  /></file>
+    <file id="f_tx_sur" name="tx_sur.fesom"><field field_ref="tx_sur"/></file>
+    <file id="f_ty_sur" name="ty_sur.fesom"><field field_ref="ty_sur"/></file>
+    <file id="f_N2"     name="N2.fesom"    ><field field_ref="N2"    /></file>
+    <file id="f_u"      name="u.fesom"     ><field field_ref="u"     /></file>
+    <file id="f_v"      name="v.fesom"     ><field field_ref="v"     /></file>
+    <file id="f_unod30" name="unod30.fesom"><field field_ref="unod30"/></file>
+    <file id="f_vnod30" name="vnod30.fesom"><field field_ref="vnod30"/></file>
+    <file id="f_w"      name="w.fesom"     ><field field_ref="w"     /></file>
+  </file_group>
+
+</file_definition>

@@ -1,0 +1,85 @@
+! ============================================================================
+! ============ Namelist file for FESOM2 tracer configuration =================
+! ============================================================================
+! palk_7 on FESOM2.8.0. Structure = 2.8.0 stock template
+! (/home/a/a270067/fesom2-2.8.0/config/namelist.tra); values below carried
+! over from the old palk_7 config where a matching parameter name existed
+! there, otherwise left at the 2.8.0 stock default (noted per line).
+! ============================================================================
+
+&tracer_listsize
+num_tracers = 100         ! old palk_7 value (same as stock default)
+/
+
+&tracer_list
+nml_tracer_list =
+1  , 'MFCT', 'QR4C', 'FCT ', 0., 1.,   ! old palk_7 value (same as stock default)
+2  , 'MFCT', 'QR4C', 'FCT ', 0., 1.,   ! old palk_7 value (same as stock default)
+!101, 'UPW1', 'UPW1', 'NON ', 0., 0.
+/
+
+&tracer_init3d
+n_ic3d   = 2                                       ! old palk_7 value (same as stock default)
+idlist   = 2, 1                                    ! old palk_7 value (same as stock default)
+filelist = 'phc3.0_winter.nc', 'phc3.0_winter.nc'  ! old palk_7 value (same as stock default)
+varlist  = 'salt', 'temp'                          ! old palk_7 value (same as stock default)
+t_insitu = .true.                                  ! old palk_7 value (same as stock default)
+ic_extrap_det = .false.                            ! 2.8.0-only, no old-palk precedent -> stock default
+ic_extrap_tol = 1.e-3                              ! 2.8.0-only, no old-palk precedent -> stock default
+/
+
+&tracer_init2d
+n_ic2d            = 3                                    ! old palk_7 value (same as stock default)
+idlist            = 1, 2, 3                              ! old palk_7 value (same as stock default)
+filelist          = 'a_ice.nc', 'm_ice.nc', 'm_snow.nc'  ! old palk_7 value (same as stock default)
+varlist           = 'a_ice', 'm_ice', 'm_snow'           ! old palk_7 value (same as stock default)
+ini_ice_from_file = .false.                              ! old palk_7 value (same as stock default)
+/
+
+&tracer_general
+smooth_bh_tra = .false.       ! old palk_7 value (same as stock default)
+gamma0_tra    = 0.0005        ! old palk_7 value (same as stock default)
+gamma1_tra    = 0.0125        ! old palk_7 value (same as stock default)
+gamma2_tra    = 0.            ! old palk_7 value (same as stock default)
+i_vert_diff   = .true.        ! old palk_7 value (same as stock default)
+AB_order      = 2             ! 2.8.0-only, no old-palk precedent -> stock default
+/
+
+&tracer_phys
+! --- Monin-Obukhov Mixing (TB04) ---
+use_momix          = .true.            ! old palk_7 value (DIFFERS from stock default .false.)
+momix_lat          = -50.0             ! old palk_7 value (same as stock default)
+momix_kv           = 0.01              ! old palk_7 value (same as stock default)
+
+! --- Convective Instability Mixing ---
+use_instabmix      = .true.            ! old palk_7 value (same as stock default)
+instabmix_kv       = 0.1               ! old palk_7 value (same as stock default)
+
+! --- Wind Mixing (PP scheme only) ---
+use_windmix        = .false.           ! old palk_7 value (same as stock default)
+windmix_kv         = 1.e-3             ! old palk_7 value (same as stock default)
+windmix_nl         = 2                 ! old palk_7 value (same as stock default)
+
+! --- Shear Instability (KPP) ---
+diff_sh_limit      = 5.0e-3            ! old palk_7 value (same as stock default)
+
+! --- Background Diffusivity ---
+Kv0_const          = .true.            ! old palk_7 value (same as stock default)
+K_ver              = 1.0e-5            ! old palk_7 value (same as stock default)
+K_hor              = 0.                ! old palk_7 value (same as stock default)
+
+! --- Double Diffusion (KPP) ---
+double_diffusion   = .false.           ! old palk_7 value (same as stock default)
+
+! --- Surface Restoring ---
+surf_relax_T       = 0.0               ! old palk_7 value (same as stock default)
+surf_relax_S       = 1.929e-06         ! old palk_7 value (same as stock default)
+balance_salt_water = .true.            ! old palk_7 value (same as stock default)
+
+! --- Climatology Restoring ---
+clim_relax         = 0.0               ! old palk_7 value (same as stock default)
+
+! --- Reference Salinity ---
+ref_sss_local      = .true.            ! old palk_7 value (same as stock default)
+ref_sss            = 34.               ! old palk_7 value (same as stock default)
+/

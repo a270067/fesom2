@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<simulation>
+  <!-- palk_7 (2026-09-18): switched from attached mode to a dedicated XIOS
+       server pool (12 ranks, appended after the 3456 model ranks -- see
+       palk7_server.job). Single-level server pool only (using_server2 is
+       for much larger server counts than 12, per FESOM2.8.0's own
+       docs/xios_xml/iodef.xml production example, which pairs it with
+       ratio_server2/number_pools_server2). -->
+
+  <context id="fesom" src="./context_fesom.xml" />
+
+  <context id="xios">
+    <variable_definition>
+      <variable_group id="parameters">
+        <variable id="using_server" type="bool">true</variable>
+        <variable id="info_level"   type="int" >0</variable>
+        <variable id="print_file"   type="bool">true</variable>
+      </variable_group>
+    </variable_definition>
+  </context>
+</simulation>

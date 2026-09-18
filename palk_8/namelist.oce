@@ -1,0 +1,116 @@
+! ============================================================================
+! ============ Namelist file for FESOM2 ocean dynamics ======================
+! ============================================================================
+! palk_7 on FESOM2.8.0. Structure = 2.8.0 stock template
+! (/home/a/a270067/fesom2-2.8.0/config/namelist.oce); values below carried
+! over from the old palk_7 config where a matching parameter name existed
+! there, otherwise left at the 2.8.0 stock default (noted per line).
+! ============================================================================
+
+&oce_dyn
+! --- Basic ocean dynamics parameters ---
+C_d                = 0.0025  ! old palk_7 value (same as stock default)
+A_ver              = 1.e-4   ! old palk_7 value (same as stock default)
+scale_area         = 5.8e9   ! old palk_7 value (same as stock default)
+
+! --- Salinity state representation ---
+use_salt_anomaly   = .false. ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Salt Plume Parameterization ---
+SPP                = .false. ! old palk_7 value (same as stock default)
+
+! --- Gent-McWilliams (GM) Eddy Parameterization ---
+Fer_GM             = .false. ! old palk_7 value (DIFFERS from stock default .true.)
+K_GM_max           = 2000.0  ! old palk_7 value (DIFFERS from stock default 1000.0)
+K_GM_min           = 2.0     ! old palk_7 value (same as stock default)
+K_GM_bvref         = 2       ! old palk_7 value (DIFFERS from stock default 1)
+K_GM_rampmax       = -1.0    ! old palk_7 value (same as stock default)
+K_GM_rampmin       = -1.0    ! old palk_7 value (same as stock default)
+K_GM_resscalorder  = 1       ! old palk_7 value (DIFFERS from stock default 2)
+K_GM_cm            = 3.0     ! 2.8.0-only, no old-palk precedent -> stock default
+K_GM_cmin          = 0.1     ! 2.8.0-only, no old-palk precedent -> stock default
+K_GM_Ktaper        = .false. ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- GM Scaling Options ---
+scaling_Ferreira   = .false. ! old palk_7 value (same as stock default)
+scaling_Rossby     = .false. ! old palk_7 value (same as stock default)
+scaling_resolution = .true.  ! old palk_7 value (same as stock default)
+scaling_FESOM14    = .false. ! old palk_7 value (same as stock default)
+
+scaling_GMzexp     = .true.  ! 2.8.0-only, no old-palk precedent -> stock default
+GMzexp_zref        = 500.0   ! 2.8.0-only, no old-palk precedent -> stock default
+GMzexp_smin        = 0.6     ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Mixed Layer Eddy Restratification (Fox-Kemper et al. 2008, 2011) ---
+use_mle            = .false. ! 2.8.0-only, no old-palk precedent -> stock default
+mle_Ce             = 0.06    ! 2.8.0-only, no old-palk precedent -> stock default
+mle_Lf_min         = 1000.0  ! 2.8.0-only, no old-palk precedent -> stock default
+mle_tau            = 86400.0 ! 2.8.0-only, no old-palk precedent -> stock default
+mle_hmax           = 500.0   ! 2.8.0-only, no old-palk precedent -> stock default
+mle_resscale_max   = 20.0    ! 2.8.0-only, no old-palk precedent -> stock default
+mle_ustar_max      = 0.05    ! 2.8.0-only, no old-palk precedent -> stock default
+mle_mld_decay_time = 0.0     ! 2.8.0-only, no old-palk precedent -> stock default
+
+scaling_GINsea     = .false. ! 2.8.0-only, no old-palk precedent -> stock default
+GINsea_fac         = 2.0     ! 2.8.0-only, no old-palk precedent -> stock default
+
+scaling_ODM95      = .true.  ! 2.8.0-only, no old-palk precedent -> stock default
+ODM95_Scr          = 0.2e-2  ! 2.8.0-only, no old-palk precedent -> stock default
+ODM95_Sd           = 1.0e-3  ! 2.8.0-only, no old-palk precedent -> stock default
+
+scaling_LDD97      = .false. ! 2.8.0-only, no old-palk precedent -> stock default
+LDD97_c            = 2.0     ! 2.8.0-only, no old-palk precedent -> stock default
+LDD97_rmin         = 15.0e3  ! 2.8.0-only, no old-palk precedent -> stock default
+LDD97_rmax         = 100.0e3 ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Redi Isopycnal Diffusion ---
+Redi               = .true.  ! old palk_7 value (same as stock default)
+Redi_Ktaper        = .false. ! FIXED 2026-09-17: stock default .true. reads fer_tapfac(), which is only
+                              ! allocated when Fer_GM .or. use_mle (oce_setup_step.F90) -- with our
+                              ! Fer_GM=.false./use_mle=.false. (both correct palk values) this crashed
+                              ! every rank on the first timestep: "Attempt to fetch from allocatable
+                              ! variable FER_TAPFAC when it is not allocated". Genuine stock-default bug
+                              ! for this flag combination, independent of the restart source.
+Redi_Kmax          = 0.0     ! 2.8.0-only, no old-palk precedent -> stock default
+Redi_Kmin          = 100.0   ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Vertical Mixing Scheme ---
+visc_sh_limit      = 5.0e-3  ! old palk_7 value (same as stock default)
+mix_scheme         = 'KPP'   ! old palk_7 value (same as stock default)
+
+! --- Convection Parameters ---
+Ricr               = 0.3     ! old palk_7 value (same as stock default)
+concv              = 1.6     ! old palk_7 value (same as stock default)
+
+! --- Tidal Forcing ---
+! 2026-09-18: turned back off. Briefly enabled (to match fesom2_main's
+! oce_modules.F90 default) to test the just-fixed Sun-term EEF bug, but the
+! very first run with it on (server mode + netCDF restart, job 27539881)
+! blew up (cfl_z jumped from ~3 to 3.6E+02 around day 7). That run changed
+! two things at once vs the last known-good baseline (tides AND netCDF
+! restart instead of raw), so tides isn't confirmed as the cause yet --
+! reverting to .false. for now to take it out of the picture while
+! debugging XIOS server mode / restart choice separately. Revisit once
+! server mode is stable on a known-good config. See namelist.cvmix for a
+! related, separately-flagged note about inert /work/ollie/... tidal MIXING
+! (not tidal potential) file paths carried over unchanged.
+use_global_tides   = .false.
+/
+
+! ===================================================================
+! Initial condition perturbation settings - unused, no old-palk precedent
+! ===================================================================
+!&oce_perturb
+!lperturb       = .false.
+!perturb_mode   = 'initial_only'
+!perturb_method = 'uniform'
+!perturb_seed   = -1
+!temp_perturb   = 0.0, 0.0
+!salt_perturb   = 0.0, 0.0
+!/
+
+! ============================================================================
+! NEVERWORLD2 (Toy_Neverworld2 module) -- only read if which_toy='neverworld2', unused here
+! ============================================================================
+&oce_neverworld2
+/

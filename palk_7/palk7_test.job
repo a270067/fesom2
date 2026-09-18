@@ -1,0 +1,50 @@
+#!/bin/bash
+#SBATCH --job-name=palk_7test
+#SBATCH -p compute
+#SBATCH --ntasks=3456
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=00:30:00
+#SBATCH -o /scratch/a/a270067/palk_7/otest_%j.out
+#SBATCH -e /scratch/a/a270067/palk_7/etest_%j.out
+#SBATCH -A ch0636
+
+# TEST RUN ONLY (2026-09-18): same setup as palk7.job (production fesom.x,
+# same restart, same 3456-task decomposition) but with par_access="independent"
+# removed from tx_sur/ty_sur in file_def_fesom.xml, to check whether that
+# fixes the "NetCDF: Attempt to extend dataset during NC_INDEPENDENT I/O
+# operation" crash job 27522359 hit ~14min in at the first monthly write.
+# 30min walltime is plenty - the crash (or the fix working) shows up well
+# before that. Stale partial 1951 output from the crashed attempt was moved
+# to pre_fix_crash_20260917/ first so this run starts clean.
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/scratch/a/a270067/palk_7
+cd "$output"
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom.x
+* numactl --localalloc -- ${modpath}/bin/fesom.x
+EOF
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit

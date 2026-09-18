@@ -1,0 +1,67 @@
+! ============================================================================
+! ========== Namelist file for FESOM2 momentum dynamics ======================
+! ============================================================================
+! palk_7 on FESOM2.8.0. Structure = 2.8.0 stock template
+! (/home/a/a270067/fesom2-2.8.0/config/namelist.dyn); values below carried
+! over from the old palk_7 config where a matching parameter name existed
+! there, otherwise left at the 2.8.0 stock default (noted per line).
+! ============================================================================
+
+! ============================================================================
+! HORIZONTAL VISCOSITY
+! ============================================================================
+&dynamics_visc
+! --- Biharmonic Viscosity Coefficients ---
+visc_gamma0        = 0.003       ! old palk_7 value (same as stock default)
+visc_gamma1        = 0.2         ! old palk_7 value (DIFFERS from stock default 0.1)
+visc_gamma2        = 0.0285      ! old palk_7 value (DIFFERS from stock default 0.285 - carried as-is, not "fixed")
+visc_easybsreturn  = 1           ! old palk_7 value (DIFFERS from stock default 1.5)
+
+! --- Harmonic (Laplacian) Viscosity Coefficients (for opt_visc=7) ---
+visc_gamma0_h      = 0.0         ! 2.8.0-only, no old-palk precedent -> stock default
+visc_gamma1_h      = 0.0         ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Viscosity Scheme Selection ---
+opt_visc           = 7           ! old palk_7 value (stock default is 5; palk explicitly used 7 = Biharmonic flow-aware, velocity differences)
+check_opt_visc     = .true.      ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Vertical Viscosity ---
+use_ivertvisc      = .true.      ! old palk_7 value (same as stock default)
+/
+
+! ============================================================================
+! GENERAL DYNAMICS SETTINGS
+! ============================================================================
+&dynamics_general
+! --- Momentum Advection ---
+momadv_opt         = 2           ! old palk_7 value (same as stock default)
+
+! --- Boundary Conditions ---
+use_freeslip       = .false.     ! old palk_7 value (same as stock default)
+
+! --- Vertical Velocity Splitting ---
+use_wsplit         = .true.      ! old palk_7 value (DIFFERS from stock default .false.)
+wsplit_maxcfl      = 0.7         ! old palk_7 value (DIFFERS from stock default 1.0)
+
+! --- Energy Diagnostics ---
+ldiag_KE           = .false.     ! old palk_7 value (same as stock default)
+
+! --- Time Stepping ---
+AB_order           = 2           ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- SSH elliptic solver ---
+soltol             = 1e-5        ! 2.8.0-only, no old-palk precedent -> stock default
+maxiter            = 2000        ! 2.8.0-only, no old-palk precedent -> stock default
+precond_variant    = 1           ! 2.8.0-only, no old-palk precedent -> stock default
+
+! --- Split-Explicit Barotropic Subcycling ---
+use_ssh_se_subcycl = .false.     ! 2.8.0-only, no old-palk precedent -> stock default
+se_BTsteps         = 50          ! 2.8.0-only, no old-palk precedent -> stock default
+se_BTtheta         = 0.14        ! 2.8.0-only, no old-palk precedent -> stock default
+se_bottdrag        = .true.      ! 2.8.0-only, no old-palk precedent -> stock default
+se_bdrag_si        = .true.      ! 2.8.0-only, no old-palk precedent -> stock default
+se_visc            = .true.      ! 2.8.0-only, no old-palk precedent -> stock default
+se_visc_gamma0     = 10          ! 2.8.0-only, no old-palk precedent -> stock default
+se_visc_gamma1     = 19500       ! 2.8.0-only, no old-palk precedent -> stock default
+se_visc_gamma2     = 0           ! 2.8.0-only, no old-palk precedent -> stock default
+/

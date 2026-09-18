@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<simulation>
+  <!-- jack_6: standalone FESOM2 + XIOS, no OASIS, attached mode (no separate
+       XIOS server ranks - matches fesom2-2.8.0's own CI test_pi setup). -->
+
+  <context id="fesom" src="./context_fesom.xml" />
+
+  <context id="xios">
+    <variable_definition>
+      <variable_group id="parameters">
+        <variable id="using_server" type="bool">false</variable>
+        <variable id="info_level"   type="int" >0</variable>
+        <variable id="print_file"   type="bool">true</variable>
+      </variable_group>
+    </variable_definition>
+  </context>
+</simulation>

@@ -1,0 +1,116 @@
+! ============================================================================
+! ============= Namelist file for FESOM2 atmospheric forcing ================
+! ============================================================================
+! Merged: 2.8.0 stock structure (this file's groups/variables changed since
+! the old 2023-era palk_7 config, which is why the first submission crashed
+! with "end-of-file during read... namelist.forcing" -- the old file was
+! missing the &age_tracer group entirely, which 2.8.0 always reads) +
+! palk's actual CORE2 forcing values carried over by variable name.
+! ============================================================================
+
+&forcing_exchange_coeff
+Ce_atm_oce = 0.00175    ! exchange coefficient of latent heat over open water (dimensionless)
+Ch_atm_oce = 0.00175    ! exchange coefficient of sensible heat over open water (dimensionless)
+Cd_atm_oce = 0.001      ! drag coefficient between atmosphere and water (dimensionless)
+Ce_atm_ice = 0.00175    ! exchange coefficient of latent heat over ice (dimensionless)
+Ch_atm_ice = 0.00175    ! exchange coefficient of sensible heat over ice (dimensionless)
+Cd_atm_ice = 0.0012     ! drag coefficient between atmosphere and ice (dimensionless)
+Swind       = 0.0       ! parameterization for coupled current feedback (0.0 = disabled)
+/
+
+&forcing_bulk
+AOMIP_drag_coeff  = .false.  ! use AOMIP drag coefficient formulation (false = use standard)
+ncar_bulk_formulae = .true.  ! use NCAR bulk formulae (Large & Yeager 2004, 2009)
+ncar_bulk_z_wind   = 10.0    ! reference height for wind forcing [m] (CORE2: 10m)
+ncar_bulk_z_tair   = 10.0    ! reference height for air temperature forcing [m] (CORE2: 10m)
+ncar_bulk_z_shum   = 10.0    ! reference height for specific humidity forcing [m] (CORE2: 10m)
+/
+
+&land_ice
+use_landice_water = .false.       ! palk value, matches stock default
+landice_start_mon = 5             ! palk value, matches stock default
+landice_end_mon   = 10            ! palk value, matches stock default
+fwf_path          = '<add path>'  ! 2.8.0-only, unused since use_landice_water=.false. -> stock default
+/
+
+! 2.8.0-only block, no old-palk precedent, no old-palk precedent -> disabled, stock defaults
+&age_tracer
+use_age_tracer    = .false.
+use_age_mask      = .false.
+age_tracer_path   = '<add path>'
+age_start_year    = 2000
+/
+
+&nam_sbc
+   ! --- Forcing file paths (palk/CORE2 values, absolute paths since ForcingDataPath='') ---
+   nm_xwind_file = '/work/ba1254/a270067/CORE2/u_10.'
+   nm_ywind_file = '/work/ba1254/a270067/CORE2/v_10.'
+   ! nm_xstre_file/nm_ystre_file: 2.8.0-only (separate wind-STRESS input, distinct from
+   ! wind-speed above). CORE2 has no separate stress product; pointed at the same
+   ! wind-speed files/vars as a safe fallback in case the code ever opens them
+   ! (no l_xstre/l_ystre disable flag exists in this namelist to gate it off).
+   nm_xstre_file = '/work/ba1254/a270067/CORE2/u_10.'
+   nm_ystre_file = '/work/ba1254/a270067/CORE2/v_10.'
+   nm_humi_file  = '/work/ba1254/a270067/CORE2/q_10.'
+   nm_qsr_file   = '/work/ba1254/a270067/CORE2/ncar_rad.'
+   nm_qlw_file   = '/work/ba1254/a270067/CORE2/ncar_rad.'
+   nm_tair_file  = '/work/ba1254/a270067/CORE2/t_10.'
+   nm_prec_file  = '/work/ba1254/a270067/CORE2/ncar_precip.'
+   nm_snow_file  = '/work/ba1254/a270067/CORE2/ncar_precip.'
+
+   ! --- Variable names in netCDF forcing files (palk/CORE2 values) ---
+   nm_xwind_var  = 'U_10_MOD'
+   nm_ywind_var  = 'V_10_MOD'
+   nm_xstre_var  = 'U_10_MOD'   ! see nm_xstre_file note above
+   nm_ystre_var  = 'V_10_MOD'   ! see nm_ystre_file note above
+   nm_humi_var   = 'Q_10_MOD'
+   nm_qsr_var    = 'SWDN_MOD'
+   nm_qlw_var    = 'LWDN_MOD'
+   nm_tair_var   = 'T_10_MOD'
+   nm_prec_var   = 'RAIN'
+   nm_snow_var   = 'SNOW'
+   nm_mslp_var   = 'SLP'        ! palk value; l_mslp=.false. below so unused, kept for consistency
+
+   ! --- Time axis configuration in forcing files (palk values) ---
+   nm_nc_iyear   = 1948
+   nm_nc_imm     = 1
+   nm_nc_idd     = 1
+   nm_nc_freq    = 1
+   nm_nc_tmid    = 1             ! palk/CORE2 value (differs from stock default 0, which is for JRA55)
+   y_perpetual   = .false.       ! 2.8.0-only, no old-palk precedent -> stock default
+
+   ! --- Enable/disable individual forcing fields (palk values) ---
+   l_xwind       = .true.
+   l_ywind       = .true.
+   l_humi        = .true.
+   l_qsr         = .true.
+   l_qlw         = .true.
+   l_tair        = .true.
+   l_prec        = .true.
+   l_mslp        = .false.
+   l_cloud       = .false.
+   l_snow        = .true.
+
+   ! --- Runoff configuration (palk value for the file; runoff_climatology is
+   !     2.8.0-only but stock default .true. matches palk's single static
+   !     runoff.nc, i.e. climatology-style usage, not per-year files) ---
+   runoff_climatology = .true.
+   runoff_data_source = 'CORE2'
+   nm_runoff_file      = '/pool/data/AWICM/FESOM2/FORCING/CORE2/runoff.nc'  ! palk's absolute path (stock default filename 'CORE2_runoff.nc' does not exist here)
+
+   ! --- Sea surface salinity restoring (palk values) ---
+   sss_data_source  = 'CORE2'
+   nm_sss_data_file = '/pool/data/AWICM/FESOM2/FORCING/CORE2/PHC2_salx.nc'
+
+   ! --- Chlorophyll data for shortwave penetration: 2.8.0-only, no old-palk
+   !     precedent, but use_sw_pene=.true. in palk's namelist.config means
+   !     this IS active now -> stock default (file existence verified) ---
+   chl_data_source  = 'Sweeney'
+   nm_chl_data_file = '/pool/data/AWICM/FESOM2/FORCING/Sweeney/Sweeney_2005.nc'
+   chl_const        = 0.1
+
+   ! --- Runoff mapper: 2.8.0-only, no old-palk precedent -> stock default (disabled) ---
+   use_runoff_mapper  = .false.
+   runoff_basins_file = '<add path>'
+   runoff_radius      = 500000.
+/

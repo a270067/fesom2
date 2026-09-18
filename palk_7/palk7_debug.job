@@ -1,0 +1,54 @@
+#!/bin/bash
+#SBATCH --job-name=palk_7dbg
+#SBATCH -p compute
+#SBATCH --ntasks=3456
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=00:30:00
+#SBATCH -o /scratch/a/a270067/palk_7/opalk7dbg_%j.out
+#SBATCH -e /scratch/a/a270067/palk_7/epalk7dbg_%j.out
+#SBATCH -A ch0636
+
+# DIAGNOSTIC RUN ONLY: same setup as palk7.job but using bin/fesom_debug.x,
+# built 2026-09-17 with -DFESOM_RUNTIME_CHECKS=paranoid (Intel: -check all
+# -traceback -fpe0 -init=snan,arrays) in build_debug/, to get a real
+# traceback (array name + line number) for the segfault
+# ("address not mapped to object at address 0x8") that job 27521263 hit on
+# the very first timestep after successfully loading the NetCDF restart.
+# bin/fesom.x itself is untouched (production build, restored after the
+# debug build's `make install` completed) - only this script's mpmd.conf
+# points at the separate fesom_debug.x. 30min walltime since we only need
+# it to reach and repeat the crash, not run the full 2 years.
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/scratch/a/a270067/palk_7
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+# namelist.*, iodef.xml and the other XIOS XMLs already live in this
+# directory (palk_7/) - nothing to stage from a central config/ dir.
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom_debug.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom_debug.x
+* numactl --localalloc -- ${modpath}/bin/fesom_debug.x
+EOF
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit

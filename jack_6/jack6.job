@@ -1,0 +1,53 @@
+#!/bin/bash
+#SBATCH --job-name=jack_6
+#SBATCH -p compute
+#SBATCH --ntasks=19200
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=08:00:00
+#SBATCH -o ojack6_%j.out
+#SBATCH -e ejack6_%j.out
+#SBATCH -A ch0636
+
+# jack_6 = jack_4, rebuilt on fesom2-2.8.0 with XIOS output (using_server=false,
+# attached mode - see iodef.xml). No separate XIOS server ranks: fesom.x alone
+# fills all 19200 tasks, same as jack_4.
+#
+# This script runs the FIRST leg only: namelist.config here is a static
+# cold-start file (yearnew=1948). For continuing a multi-leg run the way
+# jack_4 does (regenerating namelist.config's &clockinit from fesom.clock on
+# every resubmit), port jack.job's heredoc logic once this leg has completed.
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/work/uo0119/a270067/jack_6
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+# namelist.*, iodef.xml and the other XIOS XMLs already live in this directory
+# (jack_6/) - nothing to stage from a central config/ dir this time, unlike
+# jack_4's cp -n from fesom2_main/config.
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom.x
+* numactl --localalloc -- ${modpath}/bin/fesom.x
+EOF
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit

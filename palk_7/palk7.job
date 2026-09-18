@@ -1,0 +1,60 @@
+#!/bin/bash
+#SBATCH --job-name=palk_7
+#SBATCH -p compute
+#SBATCH --ntasks=3456
+#SBATCH --ntasks-per-node=128
+#SBATCH --time=08:00:00
+#SBATCH -o /scratch/a/a270067/palk_7/opalk7_%j.out
+#SBATCH -e /scratch/a/a270067/palk_7/epalk7_%j.out
+#SBATCH -A ch0636
+
+# palk_7 on FESOM2.8.0 + XIOS output (using_server=false, attached mode -
+# see iodef.xml), modeled on jack_6/jack6.job's launch mechanism. No
+# separate XIOS server ranks: fesom.x alone fills all 3456 tasks.
+#
+# Resumes from a staged restart (P36's end-of-1950 NetCDF-format state,
+# read via FESOM2.8.0's legacy netCDF restart path - see
+# feedback_fesom28_migration_pitfalls memory for why the raw/core-dump
+# restart isn't usable across FESOM2 commits) at /scratch/a/a270067/palk_7/
+# - see fesom.clock and fesom.1950.{oce,ice}.restart/ there. namelist.config's
+# ResultPath points at that same directory, so FESOM2.8.0 detects and uses
+# the restart automatically at startup.
+#
+# Runs FROM /scratch/a/a270067/palk_7 (not this config directory under
+# $HOME) so all relative-path output - SLURM logs (see -o/-e above),
+# mpmd.conf, and XIOS's own xios_client_*.out log files - lands on scratch,
+# never under $HOME. namelist.*/*.xml in that directory are symlinks back
+# to this config directory (the actual config lives here, only run output
+# goes to scratch).
+
+source /sw/etc/profile.levante
+
+modpath=/home/a/a270067/fesom2-2.8.0
+set +exu
+source ${modpath}/env/levante.dkrz.de/shell
+export LD_LIBRARY_PATH=/sw/spack-levante/intel-oneapi-mkl-2022.0.1-ttdktf/mkl/2022.0.1/lib/intel64
+echo $LD_LIBRARY_PATH
+
+output=/scratch/a/a270067/palk_7
+cd "$output"
+work=$(pwd)
+
+squeue -u $USER
+JOBID=`echo $SLURM_JOB_ID |cut -d"." -f1`
+echo $JOBID
+echo $modpath
+
+cat > mpmd.conf <<EOF
+0 numactl --interleave=0-3 -- ${modpath}/bin/fesom.x
+96 numactl --interleave=4-7 -- ${modpath}/bin/fesom.x
+* numactl --localalloc -- ${modpath}/bin/fesom.x
+EOF
+
+date
+srun -l --multi-prog mpmd.conf || {
+   exit 1
+   echo "Pizdec!!!"
+  }
+date
+
+exit
