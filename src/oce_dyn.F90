@@ -1063,7 +1063,7 @@ subroutine check_validviscopt_5(partit, mesh)
         write(*,*) '____________________________________________________________________'
         print *, achar(27)//'[0m'
         write(*,*)
-        call par_ex(partit%MPI_COMM_FESOM, partit%mype, 0)
+!DS        call par_ex(partit%MPI_COMM_FESOM, partit%mype, 0)
         end if
     else
         if (mype==0) then 

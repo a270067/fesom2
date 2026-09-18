@@ -139,7 +139,7 @@ TYPE T_DYN
 
     ! coefficient for returned sub-gridscale energy, to be used with opt_visc=5
     ! (easy backscatter)
-    real(kind=WP)                               :: visc_easybsreturn = 1.5
+    real(kind=WP)                               :: visc_easybsreturn = 0. !DS 1.5
 
     ! coefficients and options for opt_visc=8 (dynamic backscatter)
     logical                                     :: uke_scaling        = .true.
