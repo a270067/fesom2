@@ -51,6 +51,8 @@ END TYPE T_ICE_WORK
 TYPE T_ICE_THERMO
     !___________________________________________________________________________
     real(kind=WP), allocatable, dimension(:)    :: t_skin, thdgr, thdgrsn, thdgra, thdgr_old, ustar
+    ! conductive heat flux through the ice (standalone thermodynamics, output 'qcon'); diagnostic only, not in restart
+    real(kind=WP), allocatable, dimension(:)    :: qcon
     real(kind=WP), allocatable, dimension(:)    :: dyngr, dyngrsn, dyngra ! dynamic growth of: ice, snow, area (cmip6 variable for letti!)
     ! melt pond variables
     real(kind=WP), allocatable, dimension(:)    :: apnd, hpnd, ipnd  ! pond area fraction, depth, ice thickness
@@ -861,6 +863,7 @@ subroutine ice_init(ice, partit, mesh)
     ! initialse thermo array of ice derived type
     allocate(ice%thermo%ustar(         node_size))
     allocate(ice%thermo%t_skin(        node_size))
+    allocate(ice%thermo%qcon(          node_size))
     allocate(ice%thermo%thdgr(         node_size))
     allocate(ice%thermo%thdgrsn(       node_size))
     allocate(ice%thermo%thdgra(        node_size))
@@ -871,6 +874,7 @@ subroutine ice_init(ice, partit, mesh)
     allocate(ice%thermo%ipnd(          node_size))
     ice%thermo%ustar     = 0.0_WP
     ice%thermo%t_skin    = 0.0_WP
+    ice%thermo%qcon      = 0.0_WP
     ice%thermo%thdgr     = 0.0_WP
     ice%thermo%thdgrsn   = 0.0_WP
     ice%thermo%thdgra    = 0.0_WP

@@ -27,7 +27,7 @@ module ice_therm_interface
         subroutine therm_ice(ithermp, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rsss, &
         ug, ustar, T_oc, S_oc, H_ML, t, ice_dt, ch, ce, ch_i, ce_i, evap_in, fw,  fwice, fwsnw, ehf, evap, &
         rsf, dhgrowth, dhsngrowth, dAgrowth, iflice, hflatow, hfsenow, hflwrdout, hfswrow, &
-        hflwrow, hfradow, lid_clo, geolon, geolat, subli)
+        hflwrow, hfradow, lid_clo, geolon, geolat, subli, qcon)
         USE MOD_ICE
         type(t_ice_thermo), intent(in), target :: ithermp
         real(kind=WP)   h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rsss, &
@@ -35,17 +35,17 @@ module ice_therm_interface
                         dhgrowth, dhsngrowth, dAgrowth, ahf, prec, subli, subli_i, rsf, &
                         rhow, show, rhice, shice, sh, thick, thact, lat, &
                         rh, rA, qhst, sn, hsntmp, o2ihf, evap, iflice, hflatow, &
-                        hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat
+                        hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat, qcon
         end subroutine therm_ice
     end interface
 end module ice_therm_interface
 
 module ice_budget_interfaces
     interface
-        subroutine budget(ithermp, hice, hsn, t, ta, qa, fsh, flo, ug, S_oc, ch_i, ce_i, fh, subli)
+        subroutine budget(ithermp, hice, hsn, t, ta, qa, fsh, flo, ug, S_oc, ch_i, ce_i, fh, subli, qcon)
         USE MOD_ICE
         type(t_ice_thermo), intent(in), target :: ithermp
-        real(kind=WP)  hice, hsn, t, ta, qa, fsh, flo, ug, S_oc, ch_i, ce_i, fh, subli
+        real(kind=WP)  hice, hsn, t, ta, qa, fsh, flo, ug, S_oc, ch_i, ce_i, fh, subli, qcon
         end subroutine budget
         
         subroutine obudget(ithermp, qa, fsh, flo, t, ug, ta, ch, ce, geolon, & 
@@ -193,7 +193,7 @@ subroutine thermodynamics(ice, partit, mesh)
     real(kind=WP)  :: h,hsn,A,fsh,flo,Ta,qa,rain,snow,runo,rsss,rsf,evap_in
     real(kind=WP)  :: ug,ustar,T_oc,S_oc,h_ml,t,ch,ce,ch_i,ce_i,fw,fwice,fwsnw,ehf,evap
     real(kind=WP)  :: ithdgr, ithdgrsn, ithdgra, iflice, hflatow, hfsenow, hflwrdout, subli, hfswrow, hflwrow, hfradow
-    real(kind=WP)  :: lid_clo, o2ihf
+    real(kind=WP)  :: lid_clo, o2ihf, qcon
     real(kind=WP)  :: lat
     real(kind=WP)  :: geolon, geolat
     
@@ -244,7 +244,7 @@ subroutine thermodynamics(ice, partit, mesh)
     ! Friction velocity 
 !$OMP PARALLEL DEFAULT(SHARED) PRIVATE(i, j, elem, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rsss, rsf, evap_in, ug, ustar, T_oc, S_oc, &
 !$OMP                                  h_ml, t, ch, ce, ch_i, ce_i, fw, ehf, evap, ithdgr, ithdgrsn, iflice, hflatow, hfsenow, hflwrdout,    &
-!$OMP                                  subli, lid_clo, lat, geolon, geolat, o2ihf)
+!$OMP                                  subli, lid_clo, lat, geolon, geolat, o2ihf, qcon)
 !$OMP DO
     do i=1, myDim_nod2D
         ustar=0.0_WP
@@ -322,7 +322,7 @@ subroutine thermodynamics(ice, partit, mesh)
         call therm_ice(ice%thermo, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rsss, &
                       ug, ustar, T_oc, S_oc, h_ml, t, ice%ice_dt, ch, ce, ch_i, ce_i, &
                       evap_in, fw, fwice, fwsnw, ehf, evap, rsf, ithdgr, ithdgrsn, ithdgra, iflice, &
-                      hflatow, hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat, subli)
+                      hflatow, hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat, subli, qcon)
         
         !_______________________________________________________________________
         ! write ice thermodyn. results into arrays
@@ -338,6 +338,7 @@ subroutine thermodynamics(ice, partit, mesh)
         a_ice(i)          = A
         
         t_skin(i)         = t
+        ice%thermo%qcon(i)= qcon    ! conductive heat flux through the ice [W/m2], diagnostic
         fresh_wa_flux(i)  = fw      !positive down
         net_heat_flux(i)  = ehf     !positive down
         evaporation(i)    = evap    !negative up
@@ -386,7 +387,7 @@ end subroutine thermodynamics
 subroutine therm_ice(ithermp, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rsss, &
                     ug, ustar, T_oc, S_oc, H_ML, t, ice_dt, ch, ce, ch_i, ce_i,    &
                     evap_in, fw, fwice, fwsnw, ehf, evap, rsf, dhgrowth, dhsngrowth, dAgrowth, iflice,     &
-                    hflatow, hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat, subli)
+                    hflatow, hfsenow, hflwrdout, hfswrow, hflwrow, hfradow, lid_clo, geolon, geolat, subli, qcon)
     ! Ice Thermodynamic growth model     
     !
     ! Input parameters:
@@ -432,6 +433,7 @@ subroutine therm_ice(ithermp, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rss
     ! hfradow   - total radiation 
     ! subli - sublimatione over ice
     ! o2ihf - ocean to ice heat flux [W/m2] 
+    ! qcon  - conductive heat flux through the ice (ice-covered part, class mean) [W/m2], diagnostic
 
     USE MOD_ICE
     use g_forcing_param,  only: use_virt_salt  
@@ -448,6 +450,7 @@ subroutine therm_ice(ithermp, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rss
     real(kind=WP)  iflice, hflatow, hfsenow, hflwrdout, hfswrow, hflwrow, hfradow
     real(kind=WP), external  :: TFrez  ! Sea water freeze temperature.
     real(kind=WP)  lid_clo, geolon, geolat
+    real(kind=WP)  qcon, qcon_i
     !___________________________________________________________________________
     logical      , pointer :: snowdist, new_iclasses
     integer      , pointer :: iclasses, open_water_albedo
@@ -507,24 +510,28 @@ subroutine therm_ice(ithermp, h, hsn, A, fsh, flo, Ta, qa, rain, snow, runo, rss
     ! assuming ice thickness has an euqal, 7-level distribution from zero to two times h 
     rhice=0.0_WP                      
     subli=0.0_WP
+    qcon=0.0_WP
     if (thick.gt.hmin) then
         do k=1,iclasses
             thact = real((2*k-1),WP)*thick/real(iclasses,WP) ! Thicknesses of actual ice class
             if(new_iclasses) thact=h_cutoff/2.*thact       ! h_cutoff is variable (originally hcutoff was 2*h => factor 2 singles out)
             if(.not. snowdist) thact=thact+snthick         ! if snowdist=.true. snow depth is the same on every ice class
-            call budget(ithermp, thact, hsn,t,Ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,shice,subli_i) 
+            call budget(ithermp, thact, hsn,t,Ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,shice,subli_i,qcon_i) 
             !Thick ice K-class growth rate
             if(new_iclasses) then
                 rhice=rhice+shice*hpdf(k)
                 subli=subli+subli_i*hpdf(k)
+                qcon =qcon +qcon_i *hpdf(k)
              else
                 rhice=rhice+shice
                 subli=subli+subli_i
+                qcon =qcon +qcon_i
              end if
         end do
         if(.not. new_iclasses) then
             rhice=rhice/real(iclasses,WP)      	! Add to average heat flux
             subli=subli/real(iclasses,WP)
+            qcon =qcon /real(iclasses,WP)
         end if
     end if
     
@@ -673,7 +680,7 @@ end subroutine therm_ice
 !
 !
 !_______________________________________________________________________________
-subroutine budget (ithermp, hice,hsn,t,ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,fh,subli)
+subroutine budget (ithermp, hice,hsn,t,ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,fh,subli,qcon)
     ! Thick ice growth rate [m ice/sec]
     !
     ! INPUT:
@@ -703,7 +710,7 @@ subroutine budget (ithermp, hice,hsn,t,ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,fh,subli)
     type(t_ice_thermo), intent(in), target :: ithermp
     integer iter, imax      ! Number of iterations
     real(kind=WP)  hice,hsn,t,ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,fh
-    real(kind=WP)  hfsen,hfrad,hflat,hftot,subli         
+    real(kind=WP)  hfsen,hfrad,hflat,hftot,subli,qcon
     real(kind=WP)  alb             ! Albedo of sea ice
     real(kind=WP)  q1, q2	  ! coefficients for saturated specific humidity
     real(kind=WP)  A1,A2,A3,B,C, d1, d2, d3   
@@ -770,6 +777,7 @@ subroutine budget (ithermp, hice,hsn,t,ta,qa,fsh,flo,ug,S_oc,ch_i,ce_i,fh,subli)
         t=t+(A1+A2+C)/A3                        ! NEW ICE TEMPERATURE AS THE SUM OF ALL COMPONENTS
     end do
     t=min(0.0_WP,t)
+    qcon=con/hice*(TFrez(S_oc)-t)         ! conductive heat flux [W/m**2], positive upward (ice base -> surface), diagnostic
     
     !___________________________________________________________________________
     ! heat fluxes [W/m**2]:

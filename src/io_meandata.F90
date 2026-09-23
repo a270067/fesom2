@@ -2073,6 +2073,17 @@ CASE ('qcon      ')
      call def_stream(nod2D, myDim_nod2D, 'qcon',  'conductive heat flux',   'W/m^2',    ice%atmcoupl%flx_qcon(:),           io_list(i)%freq, io_list(i)%unit, io_list(i)%precision, partit, mesh)  
 CASE ('qres      ')
      call def_stream(nod2D, myDim_nod2D, 'qres',  'residual heat flux',     'W/m^2',    ice%atmcoupl%flx_qres(:),           io_list(i)%freq, io_list(i)%unit, io_list(i)%precision, partit, mesh)
+#elif !defined (__oasis) && !defined (__yac)
+! standalone ice thermodynamics (ice_thermo_oce.F90): surface temperature t_skin [degC]
+! and the conductive heat flux through the ice computed in budget()
+CASE ('ist       ')
+  if (use_ice) then
+    call def_stream(nod2D, myDim_nod2D, 'ist',    'ice surface temperature', 'degC',   ice%thermo%t_skin(:),                  io_list(i)%freq, io_list(i)%unit, io_list(i)%precision, partit, mesh)
+  end if
+CASE ('qcon      ')
+  if (use_ice) then
+    call def_stream(nod2D, myDim_nod2D, 'qcon',   'conductive heat flux',    'W/m^2',  ice%thermo%qcon(:),                    io_list(i)%freq, io_list(i)%unit, io_list(i)%precision, partit, mesh)
+  end if
 #endif
 
 !------------------------------------------
