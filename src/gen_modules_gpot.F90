@@ -166,7 +166,7 @@ MODULE mo_tidal
               * (3._WP * (SIN(geo_coord_nod2D(2,i))**2 - 1._WP/3._WP) * (sidmq - 1._WP/3._WP)&
               &  + SIN(2._WP * geo_coord_nod2D(2,i)) * sidm2 * COS(hamp) &
               &  + COS(geo_coord_nod2D(2,i))**2 * codmq * COS(2._WP * hamp))        &
-              &  + erdrad * rkosp * cris3 &
+              &  + eef * erdrad * rkosp * cris3 &
               &    * (3._WP * (SIN(geo_coord_nod2D(2,i))**2 - 1._WP/3._WP) &
               &       * (sidsq - 1._WP/3._WP) &
               &       + SIN(2._WP * geo_coord_nod2D(2,i)) * sids2 * COS(hasp) &
