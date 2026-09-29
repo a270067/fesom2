@@ -44,6 +44,7 @@ module io_xios_module
   public :: io_xios_send_0d_r8, io_xios_send_0d_r4
   public :: io_xios_is_on
   public :: io_xios_field_is_active
+  public :: io_xios_field_is_defined
   public :: io_xios_set_ice_conc, io_xios_is_ice_field
   public :: io_xios_apply_ice_mask_2d_r4, io_xios_apply_ice_mask_2d_r8
   public :: io_xios_apply_ice_mask_2d_elem_r4, io_xios_apply_ice_mask_2d_elem_r8
@@ -144,6 +145,60 @@ contains
        return
     end if
     r = xios_field_is_active(trim(name), .TRUE.)
+  end function
+
+  !> .true. if the field is declared in field_def (i.e. XIOS will accept it).
+  !> Used by io_meandata to report registered streams that the XML cannot write.
+  logical function io_xios_field_is_defined(name) result(r)
+    character(len=*), intent(in) :: name
+    r = .false.
+    if (.not. xios_on) return
+    r = xios_is_valid_field(trim(name))
+  end function
+
+  !> Number of IDEMIX2 spectral bins for the XIOS axis "nfbin". io_xios_init
+  !> runs before the CVMix namelists are read (ocean_setup), so read
+  !> idemix2_nfbin from &param_idemix2 of namelist.cvmix here; default = the
+  !> module default of g_cvmix_idemix2 (52).
+  integer function io_xios_read_nfbin() result(nfb)
+    integer            :: u, ios, p
+    character(len=512) :: line
+    logical            :: in_group
+    nfb = 52
+    open(newunit=u, file='namelist.cvmix', status='old', action='read', iostat=ios)
+    if (ios /= 0) return
+    in_group = .false.
+    do
+       read(u, '(A)', iostat=ios) line
+       if (ios /= 0) exit
+       line = adjustl(line)
+       p = index(line, '!'); if (p > 0) line = line(1:p-1)
+       if (index(to_lower(line), '&param_idemix2') == 1) then
+          in_group = .true.; cycle
+       end if
+       if (in_group .and. line(1:1) == '/') exit
+       if (in_group) then
+          p = index(to_lower(line), 'idemix2_nfbin')
+          if (p > 0) then
+             p = index(line, '=')
+             if (p > 0) then
+                read(line(p+1:), *, iostat=ios) nfb
+                if (ios /= 0) nfb = 52
+             end if
+          end if
+       end if
+    end do
+    close(u)
+  contains
+    function to_lower(str) result(lo)
+      character(len=*), intent(in) :: str
+      character(len=len(str))      :: lo
+      integer :: k
+      lo = str
+      do k = 1, len(str)
+         if (str(k:k) >= 'A' .and. str(k:k) <= 'Z') lo(k:k) = achar(iachar(str(k:k)) + 32)
+      end do
+    end function
   end function
 
 
@@ -416,6 +471,21 @@ contains
     ! real(WP), so convert explicitly (no-op in double, required when WP=real32).
     call xios_set_axis_attr("nz1",     n_glo = mesh%nl,    value = real(-mesh%zbar(1:mesh%nl), kind=8))
     call xios_set_axis_attr("std_dens", n_glo = std_dens_N, value = real(std_dens, kind=8))
+    ! IDEMIX2 spectral-bin axis (fields iwe2_*); only if the XML declares it,
+    ! so that older axis_def files keep working.
+    if (xios_is_valid_axis("nfbin")) then
+       block
+         integer :: nfb, k
+         real(kind=8), allocatable :: vbin(:)
+         nfb = io_xios_read_nfbin()
+         allocate(vbin(nfb))
+         do k = 1, nfb
+            vbin(k) = real(k, kind=8)
+         end do
+         call xios_set_axis_attr("nfbin", n_glo = nfb, value = vbin)
+         deallocate(vbin)
+       end block
+    end if
 
     ! --- 7. timestep (required by XIOS before close_context_definition) -----
     call xios_set_timestep(timestep = xios_duration(second = dt))
@@ -748,6 +818,9 @@ contains
     logical :: is_interface
     if (.not. associated(p_ulevels_nod) .or. .not. associated(p_nlevels_nod)) return
     nz = size(buf, 1); nn = size(buf, 2)
+    ! only vertical profiles (nl interfaces or nl-1 layers) are masked; other
+    ! first dimensions (density classes, IDEMIX2 spectral bins) are left alone
+    if (p_nl > 0 .and. nz /= p_nl .and. nz /= p_nl-1) return
     is_interface = (p_nl > 0 .and. nz == p_nl)
     do n = 1, min(nn, size(p_ulevels_nod))
        un = p_ulevels_nod(n)
@@ -765,6 +838,9 @@ contains
     logical :: is_interface
     if (.not. associated(p_ulevels_nod) .or. .not. associated(p_nlevels_nod)) return
     nz = size(buf, 1); nn = size(buf, 2)
+    ! only vertical profiles (nl interfaces or nl-1 layers) are masked; other
+    ! first dimensions (density classes, IDEMIX2 spectral bins) are left alone
+    if (p_nl > 0 .and. nz /= p_nl .and. nz /= p_nl-1) return
     is_interface = (p_nl > 0 .and. nz == p_nl)
     do n = 1, min(nn, size(p_ulevels_nod))
        un = p_ulevels_nod(n)
@@ -785,6 +861,7 @@ contains
     if (.not. associated(p_ulevels_elem) .or. .not. associated(p_nlevels_elem)) return
     if (.not. allocated(owned_elem_local)) return
     nz = size(buf, 1); ne = size(buf, 2)
+    if (p_nl > 0 .and. nz /= p_nl .and. nz /= p_nl-1) return
     is_interface = (p_nl > 0 .and. nz == p_nl)
     do ee = 1, min(ne, n_owned_elem)
        e = owned_elem_local(ee)
@@ -804,6 +881,7 @@ contains
     if (.not. associated(p_ulevels_elem) .or. .not. associated(p_nlevels_elem)) return
     if (.not. allocated(owned_elem_local)) return
     nz = size(buf, 1); ne = size(buf, 2)
+    if (p_nl > 0 .and. nz /= p_nl .and. nz /= p_nl-1) return
     is_interface = (p_nl > 0 .and. nz == p_nl)
     do ee = 1, min(ne, n_owned_elem)
        e = owned_elem_local(ee)
@@ -832,6 +910,7 @@ contains
   private
   public :: io_xios_is_on
   public :: io_xios_field_is_active
+  public :: io_xios_field_is_defined
   public :: io_xios_send_2d_r8, io_xios_send_3d_r8
   public :: io_xios_send_2d_r4, io_xios_send_3d_r4
   public :: io_xios_send_0d_r8, io_xios_send_0d_r4
@@ -850,6 +929,11 @@ contains
   end function
 
   logical function io_xios_field_is_active(name) result(r)
+    character(len=*), intent(in) :: name
+    r = .false.
+  end function
+
+  logical function io_xios_field_is_defined(name) result(r)
     character(len=*), intent(in) :: name
     r = .false.
   end function

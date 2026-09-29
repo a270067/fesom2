@@ -13,7 +13,7 @@ module io_MEANDATA
   use async_threads_module
   use io_redistribute
   use netcdf
-  use io_xios_module, only: io_xios_is_on, io_xios_field_is_active, &
+  use io_xios_module, only: io_xios_is_on, io_xios_field_is_active, io_xios_field_is_defined, &
                             io_xios_send_2d_r8, io_xios_send_2d_r4, &
                             io_xios_send_3d_r8, io_xios_send_3d_r4, &
                             io_xios_set_ice_conc, io_xios_is_ice_field, &
@@ -665,6 +665,10 @@ subroutine ini_mean_io(ice, dynamics, tracers, partit, mesh)
           "volo                ", &
           "v_rhs_ice           ", "v_total_tend        ", "vve_5               ", &
           "vwice               ", "vwind               ", "w                   ", &
+          ! physical streams that were missing from this list (2026-09-29)
+          "hfw                 ", "hfh                 ", "hfw3D               ", &
+          "hfh3D               ", "Tsurf               ", "dens_insitu         ", &
+          "dens_sigma0         ", "IDEMIX2             ", &
           "xCO2atm             ", &
           ! WI-2: phaeocystis + T* physiology diagnostics. Registered here so XIOS
           ! can send them; their actual output is gated in file_def_fesom.xml.j2
@@ -2662,6 +2666,49 @@ END DO ! --> DO i=1, io_listsize
         end if
     end if
 
+#if defined(__XIOS)
+    !___________________________________________________________________________
+    ! XIOS mode: report registered streams that field_def does not declare.
+    ! XIOS drops such fields silently; tools/xios/gen_xios_xml.py generates a
+    ! field_def with every stream of this file.
+    if (io_xios_is_on()) then
+        block
+          integer :: nn, nundef
+          character(len=4096) :: undef_list
+          nundef = 0; undef_list = ''
+          do nn = 1, io_NSTREAMS
+             if (.not. io_xios_field_is_defined(trim(io_stream(nn)%p%name))) then
+                nundef = nundef + 1
+                if (len_trim(undef_list) < 4000) undef_list = trim(undef_list)//' '//trim(io_stream(nn)%p%name)
+             end if
+          end do
+          if (mype == 0) then
+             ! list of all registered streams: which fields file_def can request
+             block
+               integer :: fu, ios
+               open(newunit=fu, file='fesom_xios_streams.txt', status='replace', action='write', iostat=ios)
+               if (ios == 0) then
+                  write(fu,'(a)') '# stream  glsize1  glsize2  declared_in_field_def'
+                  do nn = 1, io_NSTREAMS
+                     write(fu,'(a,1x,i0,1x,i0,1x,l1)') trim(io_stream(nn)%p%name), io_stream(nn)%p%glsize(1), &
+                          io_stream(nn)%p%glsize(2), io_xios_field_is_defined(trim(io_stream(nn)%p%name))
+                  end do
+                  close(fu)
+               end if
+             end block
+             write(*,'(a,i0,a,i0,a)') ' XIOS: ', io_NSTREAMS, ' streams registered, ', &
+                                      io_NSTREAMS - nundef, ' declared in field_def'
+             if (nundef > 0) then
+                write(*,'(a,i0,a)') ' XIOS: ', nundef, ' registered streams are NOT declared in'// &
+                                    ' field_def_fesom.xml and cannot be written:'
+                write(*,'(a)') trim(undef_list)
+                write(*,'(a)') ' XIOS: regenerate field_def with tools/xios/gen_xios_xml.py'
+             end if
+          end if
+        end block
+    end if
+#endif
+
     !___________________________________________________________________________
     ! Output-precision summary, printed once per run so the precision of what
     ! lands on disk is visible in the log rather than implied by the file.
@@ -4197,6 +4244,17 @@ subroutine def_stream3D(glsize, lcsize, name, description, units, data, freq, fr
         end if    
     end do
 
+#if defined(__XIOS)
+    ! XIOS mode registers every stream id; some variables are registered by
+    ! both their own id and a diagnostic group (e.g. 'lwr' and ldiag_forc).
+    ! Keep the first definition instead of aborting.
+    if (io_xios_is_on()) then
+        if (stream_already_defined(name)) then
+            if (partit%mype==0) write(*,*) 'XIOS mode: stream ', trim(name), ' already registered, second definition skipped'
+            return
+        end if
+    end if
+#endif
     !___________________________________________________________________________
     if (partit%mype==0) then
         write(*,*) 'adding I/O stream 3D for ', trim(name)
@@ -4287,6 +4345,17 @@ subroutine def_stream2D(glsize, lcsize, name, description, units, data, freq, fr
         end if    
     end do
 
+#if defined(__XIOS)
+    ! XIOS mode registers every stream id; some variables are registered by
+    ! both their own id and a diagnostic group (e.g. 'lwr' and ldiag_forc).
+    ! Keep the first definition instead of aborting.
+    if (io_xios_is_on()) then
+        if (stream_already_defined(name)) then
+            if (partit%mype==0) write(*,*) 'XIOS mode: stream ', trim(name), ' already registered, second definition skipped'
+            return
+        end if
+    end if
+#endif
     !___________________________________________________________________________
     if (partit%mype==0) then
         write(*,*) 'adding I/O stream 2D for ', trim(name)

@@ -950,6 +950,11 @@ nl              => mesh%nl
     !!PS allocate(Visc(nl-1, elem_size))
     allocate(t_star(node_size))
     allocate(qsr_c(node_size))
+    ! only filled by the double-gyre toy set-up; zero otherwise, because the
+    ! output streams 't_star' and 'qsr' point to them (uninitialized values
+    ! beyond the float range made the XIOS server abort)
+    t_star = 0.0_WP
+    qsr_c  = 0.0_WP
     ! ================
     ! elevation and its rhs
     ! ================
